@@ -1,14 +1,17 @@
+import { format as sqlFormat } from "@sqltools/formatter"
+import { type Config as SqlFormatterConfig } from "@sqltools/formatter/lib/core/types"
 import ansi from "ansis"
 import fs from "fs"
 import path from "path"
 import { highlight } from "sql-highlight"
-import { format as sqlFormat } from "@sqltools/formatter"
-import { type Config as SqlFormatterConfig } from "@sqltools/formatter/lib/core/types"
 import { type DatabaseType } from "../driver/types/DatabaseType"
+import { RandomGenerator } from "../util/RandomGenerator"
 
 export { EventEmitter } from "events"
 export { ReadStream } from "fs"
 export { Readable, Writable } from "stream"
+
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 /**
  * Platform-specific tools.
@@ -19,35 +22,25 @@ export class PlatformTools {
      */
     static type: "browser" | "node" = "node"
 
+    private static isNode =
+        typeof process !== "undefined" && !!process.versions?.node
+
     /**
-     * Gets global variable where global stuff can be stored.
+     * @returns the platform-specific global variable
      */
     static getGlobalVariable(): any {
+        if (typeof globalThis !== "undefined") {
+            return globalThis
+        }
         return global
     }
 
     /**
-     * Reads the version string from package.json of the given package.
-     * This operation is only supported in node.
-     *
-     * @param name
-     */
-    static readPackageVersion(name: string): string {
-        try {
-            return require(`${name}/package.json`).version
-        } catch (err) {
-            throw new TypeError(
-                `Failed to read package.json for "${name}": ${err.message}`,
-                { cause: err },
-            )
-        }
-    }
-
-    /**
      * Loads ("require"-s) given file or package.
-     * This operation only supports on node platform
+     * This operation is only supported on the NodeJS platform
      *
-     * @param name
+     * @param name name of the module to be imported
+     * @returns the module
      */
     static load(name: string): any {
         // if name is not absolute or relative, then try to load package from the node_modules of the directory we are currently in
@@ -155,6 +148,22 @@ export class PlatformTools {
         // PlatformTools.load - it's not just a way to replace `require` all willy-nilly - let's throw
         // an error.
         throw new TypeError(`Invalid Package for PlatformTools.load: ${name}`)
+    }
+
+    /**
+     * @param input string to encode
+     * @returns the SHA-1 digest of the input string
+     */
+    static sha1(input: string): string {
+        if (PlatformTools.isNode) {
+            const crypto =
+                require("node:crypto") as typeof import("node:crypto") // eslint-disable-line @typescript-eslint/consistent-type-imports
+            const hashFunction = crypto.createHash("sha1")
+            hashFunction.update(input, "utf8")
+            return hashFunction.digest("hex")
+        }
+
+        return RandomGenerator.sha1(input)
     }
 
     /**
