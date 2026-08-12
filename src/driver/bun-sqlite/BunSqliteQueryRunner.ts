@@ -119,18 +119,26 @@ export class BunSqliteQueryRunner extends AbstractSqliteQueryRunner {
 
             // bun:sqlite has no stmt.reader — use columnNames as indicator instead.
             if (stmt.columnNames.length > 0) {
-                const raw = stmt
-                    .all(...normalizedParameters)
-                    .map((row: Record<string, unknown>) =>
-                        Object.fromEntries(
-                            Object.entries(row).map(([key, value]) => [
-                                key,
-                                value instanceof Uint8Array
-                                    ? Buffer.from(value)
-                                    : value,
-                            ]),
-                        ),
+                const raw = stmt.all(...normalizedParameters)
+
+                // Convert Uint8Array blobs to Buffer only when blobs are present.
+                if (raw.length > 0) {
+                    const blobKeys = Object.keys(raw[0]).filter(
+                        (k) => raw[0][k] instanceof Uint8Array,
                     )
+                    if (blobKeys.length > 0) {
+                        for (const row of raw) {
+                            for (const k of blobKeys) {
+                                if (row[k] instanceof Uint8Array) {
+                                    ;(row as Record<string, unknown>)[k] =
+                                        Buffer.from(
+                                            row[k] as Uint8Array,
+                                        )
+                                }
+                            }
+                        }
+                    }
+                }
 
                 result.raw = raw
 
