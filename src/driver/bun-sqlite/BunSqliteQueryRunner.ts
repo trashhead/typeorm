@@ -130,10 +130,8 @@ export class BunSqliteQueryRunner extends AbstractSqliteQueryRunner {
                         for (const row of raw) {
                             for (const k of blobKeys) {
                                 if (row[k] instanceof Uint8Array) {
-                                    ;(row as Record<string, unknown>)[k] =
-                                        Buffer.from(
-                                            row[k] as Uint8Array,
-                                        )
+                                    (row as Record<string, unknown>)[k] =
+                                        Buffer.from(row[k] as Uint8Array)
                                 }
                             }
                         }
